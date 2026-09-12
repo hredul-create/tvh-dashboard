@@ -568,18 +568,10 @@
   const KPI_STORAGE_KEY = 'kpi-kra:data';
   const KPI_DEFAULT_DATA = {
     kras: [
-      { id: 'kra_growth', title: 'Sales & Growth', kpis: [
-        { id: 'k1', label: 'SEO organic traffic growth', target: 20, actual: 0, unit: '% growth' },
-        { id: 'k2', label: 'New sales / revenue growth', target: 15, actual: 0, unit: '% growth' },
-      ]},
       { id: 'kra_content', title: 'Content & Social Media', kpis: [
         { id: 'k3', label: 'Social media posts published', target: 10, actual: 0, unit: 'posts' },
         { id: 'k4', label: 'Reels produced', target: 2, actual: 0, unit: 'reels' },
         { id: 'k5', label: 'Testimonials collected', target: 2, actual: 0, unit: 'testimonials' },
-      ]},
-      { id: 'kra_ads', title: 'Meta Ads', kpis: [
-        { id: 'k6', label: 'Leads generated', target: 50, actual: 0, unit: 'leads' },
-        { id: 'k7', label: 'Ad spend efficiency (ROAS)', target: 3, actual: 0, unit: 'x' },
       ]},
       { id: 'kra_offline', title: 'Offline Marketing (BTL)', kpis: [
         { id: 'k8', label: 'Merchandise / stickers distributed', target: 500, actual: 0, unit: 'units' },
@@ -601,7 +593,15 @@
   async function kpiLoad() {
     try {
       const res = await window.storage.get(KPI_STORAGE_KEY);
-      kpiData = res ? JSON.parse(res.value) : JSON.parse(JSON.stringify(KPI_DEFAULT_DATA));
+      if (res) {
+        kpiData = JSON.parse(res.value);
+        if (kpiData && kpiData.kras) {
+          kpiData.kras = kpiData.kras.filter(k => k.id !== 'kra_growth' && k.id !== 'kra_ads');
+          kpiSave();
+        }
+      } else {
+        kpiData = JSON.parse(JSON.stringify(KPI_DEFAULT_DATA));
+      }
     } catch (e) {
       kpiData = JSON.parse(JSON.stringify(KPI_DEFAULT_DATA));
     }
@@ -676,6 +676,11 @@
     kra.title = value;
     kpiSave();
   }
+  function kraDelete(kraId) {
+    kpiData.kras = kpiData.kras.filter(k => k.id !== kraId);
+    kpiSave();
+    renderShell();
+  }
 
   function renderKpiPanel() {
     const stats = kpiOverallStats();
@@ -713,6 +718,7 @@
             <div class="kra-avg">
               KRA average: <strong>${avg}%</strong>
               <span class="status-chip ${avgStatus}">${kpiStatusLabel(avgStatus)}</span>
+              <div class="del-x" data-delete-kra="${kra.id}" title="Delete this KRA" style="font-size:16px;margin-left:6px;cursor:pointer;">×</div>
             </div>
           </div>
           <div class="kpi-row head-row">
@@ -793,6 +799,9 @@
     document.querySelectorAll('[data-kra-title]').forEach(el => {
       el.addEventListener('blur', () => kraUpdateTitle(el.dataset.kraTitle, el.value));
       el.addEventListener('keydown', (e) => { if (e.key === 'Enter') el.blur(); });
+    });
+    document.querySelectorAll('[data-delete-kra]').forEach(el => {
+      el.addEventListener('click', () => kraDelete(el.dataset.deleteKra));
     });
     const addKraBtn = document.getElementById('addKraBtn');
     if (addKraBtn) addKraBtn.addEventListener('click', kraAdd);
